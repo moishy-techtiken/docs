@@ -1,5 +1,7 @@
-# 🧾 Frontend Code Style Guide  
+# 🧾 Frontend Code Style Guide
+
 **Framework:** Next.js (App Router)  
+**Language:** JavaScript only (❌ Do not use TypeScript)  
 **Styling:** Tailwind CSS (default only)  
 **Icons:** Google Material Icons
 
@@ -11,40 +13,77 @@ This guide defines the file structure, styling rules, and component architecture
 
 ```
 /app
-  /pages           → Route-level pages (e.g., dashboard, settings)
-  /auth            → Authentication pages (e.g., login, register)
+  /(pages)           → Route-level pages (e.g., dashboard, settings)
+    /[route]/
+      page.jsx       → Main page file
+      layout.jsx     → If needed, separate layout
+    layout.jsx       → Shared layout components (Header, Sidebar, etc.)
+  /(auth)            → Authentication pages (e.g., login, register)
+    /login/
+      page.jsx
+    /logout/
+      page.jsx
+  Layout.jsx
+
 /components
-  /layout          → Shared layout components (e.g., Header, Sidebar)
-  /pages
-    /[route]       → Components specific to each route
-/lib               → Server-side utilities (e.g., DB, API wrappers)
-/utils             → Client-side pure functions (one per file)
+  /layout/           → Shared layout components (e.g., Header, Sidebar)
+  /pages/
+    /[route]/        → Components specific to each route
+    *.jsx           → Additional components used on this page
+
+/lib                 → Server-side utilities (API wrappers).
+                       Standard lib folder provided and should always be used.
+
+/utils               → Client-side pure functions (one per file)
 ```
 
-- `components/pages/[route]` mirrors the structure of `app/pages/[route]`.
+- `components/pages/[route]` mirrors the structure of `app/(pages)/[route]`.
 - Logic shared across pages belongs in `/lib` or `/utils`.
 
 ---
 
-## 📄 2. Page Files (`app/pages/[route]/page.tsx`)
+## 📄 2. Page Files (`app/(pages)/[route]/page.jsx`)
 
 - Contains only the **server-side data fetch** needed for initial page load.
-- Imports the corresponding component from `components/pages/[route]/index.tsx`.
+- Imports the corresponding component from `components/pages/[route]/index.jsx`.
 - Passes fetched data directly to the component.
-- ❌ No business/rendering logic in `page.tsx`.
+- ❌ No business/rendering logic in `page.jsx`.
+- Should always be named `Page()`.
 
 **Example:**
-```tsx
-// app/pages/dashboard/page.tsx
-import DashboardPage from '@/components/pages/dashboard';
+
+```jsx
+// app/(pages)/dashboard/page.jsx
+import DashboardPage from "@/components/pages/dashboard";
+import { serverApi } from "@/lib/serverFetch";
 
 export default async function Page() {
-  const res = await fetch('https://api.example.com/data');
-  const data = await res.json();
-
+  const data = await serverApi.get("https://api.example.com/data");
   return <DashboardPage data={data} />;
 }
 ```
+
+If `params` or `searchParams` are needed, it should be like this:
+
+**Example:**
+
+```jsx
+// app/(pages)/dashboard/page.jsx
+import DashboardPage from "@/components/pages/dashboard";
+import { serverApi } from "@/lib/serverFetch";
+
+export default async function Page({ params, searchParams }) {
+  const { location } = params;
+  const { searchLocation } = searchParams;
+
+  const data = await serverApi.get(
+    "https://api.example.com/data" + location + searchLocation
+  );
+  return <DashboardPage data={data} />;
+}
+```
+
+- ⚠️ Do **not** include `params` or `searchParams` unless needed
 
 ---
 
@@ -52,47 +91,67 @@ export default async function Page() {
 
 ### `components/pages/[route]`
 
-- Each component is in its **own file**.
-- `index.tsx` is the **main entry point** and:
-  - Imports and assembles all components
-  - Contains all shared logic for the page
-  - Passes a centralized object down to child components
+- Each component must be in its **own file**.
+- `index.jsx` is the **main entry point** for the page:
+  - Imports and assembles all child components.
+  - Contains all **page-specific logic** and computed data.
+  - Defines and passes down a centralized object to all components.
 
-**Example File Structure:**
+**Example Structure:**
+
 ```
 components/
   pages/
     dashboard/
-      index.tsx
-      StatsCard.tsx
-      ActivityList.tsx
+      index.jsx        → Main container for the dashboard route
+      StatsCard.jsx    → UI subcomponent
+      ActivityList.jsx → UI subcomponent
 ```
 
 ---
 
 ## ⚙️ 4. Route Logic Object
 
-In each `index.tsx`, define a **PascalCase object** (e.g., `Dashboard`) that holds all the logic, event handlers, and derived data for the page.
+In each `index.jsx`, define an **UPPERCASE object** (e.g., `DASHBOARD`) that holds all logic, state, and derived data for the page.
 
-- This object is passed down to all components.
+- This object must be passed as a prop to all child components using the **same UPPERCASE name**.
+- The **page component must be named like the route** followed by `Page` (e.g., `DashboardPage` for `/dashboard`).
 - ❌ Do not use React Context unless explicitly needed.
 
-**Example:**
-```tsx
-const Dashboard = {
-  handleRefresh: () => { ... },
-  stats: [ ... ]
-};
+**✅ Example:**
+
+```jsx
+// components/pages/dashboard/index.jsx
+import { useState } from "react";
+import StatsCard from "./StatsCard";
+import ActivityList from "./ActivityList";
 
 export default function DashboardPage({ data }) {
+  const [showDate, setShowDate] = useState(false);
+
+  const DASHBOARD = {
+    showDate,
+    setShowDate,
+    data,
+    handleRefresh: () => {
+      console.log("Refreshing...");
+    },
+  };
+
   return (
-    <div>
-      <StatsCard Dashboard={Dashboard} />
-      <ActivityList Dashboard={Dashboard} />
+    <div className="space-y-4">
+      <StatsCard DASHBOARD={DASHBOARD} />
+      <ActivityList DASHBOARD={DASHBOARD} />
     </div>
   );
 }
 ```
+
+🧠 **Key Rules Recap**:
+
+- Route logic object is always named in `ALL CAPS`.
+- Main page component is named in `PascalCase` matching the route (e.g., `BookingsPage`, `SettingsPage`).
+- Props passed to child components must match the object name (`DASHBOARD={DASHBOARD}`).
 
 ---
 
@@ -103,10 +162,11 @@ export default function DashboardPage({ data }) {
 - File name must match the function name.
 
 **Example:**
+
 ```js
 // utils/formatDate.js
 export default function formatDate(date) {
-  return new Intl.DateTimeFormat('en-US').format(new Date(date));
+  return new Intl.DateTimeFormat("en-US").format(new Date(date));
 }
 ```
 
@@ -130,18 +190,23 @@ export default function formatDate(date) {
 ## 🎯 7. Icons
 
 - Use only **Google Material Icons**.
-- Load via CDN or install using `@mui/icons-material` if needed.
+- Load via CDN — do **not install as npm**.
+- Create a `globalIcons.css` file in the root of your project and include the following:
 
-**Example (HTML style):**
-```html
-<span class="material-icons">check_circle</span>
+```css
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" -25, "opsz" 40;
+}
 ```
 
-**Example (React):**
-```tsx
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+- Import this CSS file in your main `app/layout.jsx`.
 
-<CheckCircleIcon className="text-green-600" />
+**✅ Example Usage:**
+
+```html
+<span class="material-symbols-outlined">check_circle</span>
 ```
 
 ---
@@ -149,11 +214,66 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 ## ✅ Summary
 
 This style guide ensures:
+
 - Predictable page and component structure
 - Clean separation of data, logic, and presentation
 - Scalable and maintainable codebase
 - Easy onboarding for new developers
 
 All developers must follow this guide unless otherwise specified.
+
+
+---
+
+## 📂 8. Required Root Files
+
+These files must be included in the root of your project:
+
+### `error.jsx`
+Handles global error boundaries for your app.
+
+**Example:**
+```jsx
+"use client";
+
+export default function Error({ error, reset }) {
+  return (
+    <div className="p-6 text-center text-red-600">
+      <h2>Something went wrong!</h2>
+      <button onClick={reset} className="mt-4 text-blue-500 underline">
+        Try again
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+### `globals.css`
+Main global stylesheet for your Tailwind setup.
+
+**Include Tailwind base, components, and utilities:**
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+---
+
+### `globalIcons.css`
+For loading Google Material Icons.
+
+**Include:**
+```css
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" -25, "opsz" 40;
+}
+```
+
+Import `globals.css` and `globalIcons.css` in `app/layout.jsx`.
 
 ---
