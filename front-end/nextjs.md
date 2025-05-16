@@ -12,10 +12,6 @@ This guide defines the file structure, styling rules, and component architecture
 ## 📁 1. Project Structure
 
 ```
-project-root/
-  error.jsx           → Global error boundary
-  globals.css         → Tailwind global styles
-  globalIcons.css     → Google Material Icons loader
 /app
   /(pages)           → Route-level pages (e.g., dashboard, settings)
     /[route]/
@@ -28,6 +24,9 @@ project-root/
     /logout/
       page.jsx
   Layout.jsx
+  error.jsx           → Global error boundary
+  globals.css         → Tailwind global styles
+  globalIcons.css     → Google Material Icons loader
 
 /components
   /layout/           → Shared layout components (e.g., Header, Sidebar)
