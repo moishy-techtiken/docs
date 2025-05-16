@@ -24,6 +24,9 @@ This guide defines the file structure, styling rules, and component architecture
     /logout/
       page.jsx
   Layout.jsx
+  error.jsx           → Global error boundary
+  globals.css         → Tailwind global styles
+  globalIcons.css     → Google Material Icons loader
 
 /components
   /layout/           → Shared layout components (e.g., Header, Sidebar)
@@ -221,59 +224,5 @@ This style guide ensures:
 - Easy onboarding for new developers
 
 All developers must follow this guide unless otherwise specified.
-
-
----
-
-## 📂 8. Required Root Files
-
-These files must be included in the root of your project:
-
-### `error.jsx`
-Handles global error boundaries for your app.
-
-**Example:**
-```jsx
-"use client";
-
-export default function Error({ error, reset }) {
-  return (
-    <div className="p-6 text-center text-red-600">
-      <h2>Something went wrong!</h2>
-      <button onClick={reset} className="mt-4 text-blue-500 underline">
-        Try again
-      </button>
-    </div>
-  );
-}
-```
-
----
-
-### `globals.css`
-Main global stylesheet for your Tailwind setup.
-
-**Include Tailwind base, components, and utilities:**
-```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-```
-
----
-
-### `globalIcons.css`
-For loading Google Material Icons.
-
-**Include:**
-```css
-@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
-
-.material-symbols-outlined {
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" -25, "opsz" 40;
-}
-```
-
-Import `globals.css` and `globalIcons.css` in `app/layout.jsx`.
 
 ---
